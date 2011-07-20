@@ -1,6 +1,5 @@
 package com.royvandewater.roybots;
 
-import java.io.File;
 import robocode.AdvancedRobot;
 import robocode.ScannedRobotEvent;
 import com.royvandewater.roybots.utils.RoboLog;
@@ -9,34 +8,49 @@ public class Sample extends AdvancedRobot {
 
     private static final double BEARING_MARGIN_OF_ERROR = 0.01;
     private static final int LOGLEVEL = RoboLog.DEBUG;
+    private static final long STALE_DATA_TIMEOUT = 5;
     private RoboLog logger;
+    private int direction = 1;
+    private double lastKnownBearings;
+    private long lastScan;
 
+    /*
+     * DPS = (60x) / (5 + x); 0.1 < x < 3.0
+     * x is power
+     * 
+     * Minimum DPS:   2.94  rps @ 0.1 power = 1.17  DPS
+     * Maximum ROF:   2.727 rps @ 0.5 power = 5     DPS
+     * Maximum Power: 1.875 rps @ 3.0 power = 22.5  DPS
+     */
+    
     private void onCreate() {
-        File loggerFilename = getDataFile(this.getClass().getCanonicalName() + ".log");
+        String loggerFilename = getDataFile(getClass().getCanonicalName() + ".log").getAbsolutePath();
         this.logger = new RoboLog(loggerFilename, LOGLEVEL);
     }
 
     @Override
     public void run() {
         onCreate();
-        
-        double gunHeading = 0;
+        lastKnownBearings = 0;
+        lastScan = 0;
+
         while (true) {
             setTurnRadarRightRadians(Math.PI);
-            setTurnRightRadians(Math.PI / 2);
-            setTurnGunRightRadians(-1 * gunHeading);
-            setAhead(30);
-            gunHeading = getGunHeadingRadians();
             execute();
+            maybeFire();
         }
+    }
+    
+    public void maybeFire() {
+        if (Math.abs(getGunBearingOffset(lastKnownBearings)) < BEARING_MARGIN_OF_ERROR && (getTime() - lastScan) < STALE_DATA_TIMEOUT)
+            fireBullet(3);
     }
 
     @Override
     public void onScannedRobot(ScannedRobotEvent event) {
-        if (Math.abs(getGunBearingOffset(event.getBearingRadians())) < BEARING_MARGIN_OF_ERROR)
-            fire(2);
-        
-        //setTurnGunToBearing(event.getBearingRadians());
+        lastKnownBearings = event.getBearingRadians();
+        lastScan = getTime();
+        setTurnGunToBearing(lastKnownBearings);
         execute();
     }
 
@@ -51,12 +65,6 @@ public class Sample extends AdvancedRobot {
 
     private void setTurnGunToBearing(double bearing) {
         double offset = getGunBearingOffset(bearing);
-
-        logger.d("RobotHeading: " + getHeadingRadians());
-        logger.d("GunHeading:   " + getGunHeadingRadians());
-        logger.d("GunBearing:   " + getGunBearing());
-        logger.d("bearing:      " + bearing);
-        logger.d("Offset:       " + offset);
 
         setTurnGunRightRadians(offset);
     }
