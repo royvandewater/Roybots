@@ -1,4 +1,4 @@
-package com.royvandewater.roybots.utils;
+package com.royvandewater.roybots.util;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -54,7 +54,7 @@ public class RoboLog {
     }
 
     private void writeToLog(Object object, int logType) {
-        if (logType >= logLevel)
+        if (logType <= logLevel)
             printStream.println(String.format("%1$-8s", LOG_TYPES[logType] + ": ") + object.toString());
     }
 }
