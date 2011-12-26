@@ -1,7 +1,9 @@
 package com.royvandewater.roybots.util;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+
 import robocode.RobocodeFileOutputStream;
 
 public class RoboLog {
@@ -17,24 +19,36 @@ public class RoboLog {
     private RobocodeFileOutputStream outputStream;
     private int logLevel;
 
-    public RoboLog(String loggerFilename, int logLevel) {
+    public RoboLog(File dataFile, int logLevel) {
         try {
-            this.outputStream = new RobocodeFileOutputStream(loggerFilename, true);
+        	this.outputStream = new RobocodeFileOutputStream(dataFile.getAbsolutePath(), true);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        this.printStream = new PrintStream(outputStream);
+        this.printStream = new PrintStream(outputStream, true);
         this.logLevel = logLevel;
-        this.i("================================================");
         this.i("Logger Initialized");
-        this.i("================================================");
     }
 
     @Override
     protected void finalize() throws Throwable {
         outputStream.close();
         super.finalize();
+    }
+    
+    public void close() {
+        close();
+    }
+    
+    public void close(Object object) {
+        i("Closing Log: " + object);
+        
+        try {
+            outputStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void d(Object object) {
