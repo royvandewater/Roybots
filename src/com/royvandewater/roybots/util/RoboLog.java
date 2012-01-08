@@ -6,7 +6,7 @@ import java.io.PrintStream;
 
 import robocode.RobocodeFileOutputStream;
 
-public class RoboLog {
+public class RoboLog implements AutoCloseable {
 
     public static final int DEBUG = 0;
     public static final int INFO = 1;
