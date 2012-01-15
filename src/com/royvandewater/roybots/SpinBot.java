@@ -1,32 +1,32 @@
 package com.royvandewater.roybots;
 
-import java.io.File;
+import java.util.ArrayList;
+
 import robocode.AdvancedRobot;
 import robocode.BattleEndedEvent;
 import robocode.DeathEvent;
 import robocode.ScannedRobotEvent;
 import robocode.WinEvent;
 import robocode.util.Utils;
+
+import com.royvandewater.roybots.util.KnowledgeBank;
 import com.royvandewater.roybots.util.RoboLog;
-import com.royvandewater.roybots.util.RoyMath;
+import com.royvandewater.roybots.util.Sighting;
 
 public class SpinBot extends AdvancedRobot
 {
-
     private static final int TARGET_EXPIRE_LIMIT = 16;
     private static final String LOG_FILENAME = "spin_bot.log";
     private ScannedRobotEvent target;
     private RoboLog log;
     private double targetHeading = 0.0;
     private int direction = 1;
+    private KnowledgeBank knowledgeBank;
 
     @Override
     public void run()
     {
         setup();
-
-        File logFile = getDataFile(LOG_FILENAME);
-        this.log = new RoboLog(logFile, RoboLog.INFO);
         
         while (true) {
             scan();
@@ -69,12 +69,17 @@ public class SpinBot extends AdvancedRobot
     private void setup()
     {
         setAdjustGunForRobotTurn(true);
+        
+        log = new RoboLog(getDataFile(LOG_FILENAME), RoboLog.INFO);
+        knowledgeBank = new KnowledgeBank();
     }
 
     public void aim()
     {
         if (target != null) {
-            double howFarToTurn = RoyMath.constrain(targetHeading - getGunHeadingRadians());
+
+            knowledgeBank.getFiringSolution(target);
+            double howFarToTurn = Utils.normalRelativeAngle(targetHeading - getGunHeadingRadians());
 
             setTurnGunRightRadians(howFarToTurn);
         }
@@ -92,10 +97,9 @@ public class SpinBot extends AdvancedRobot
 
     public void move()
     {
-
         if (target != null && getTurnRemainingRadians() == 0) {
             double amountToTurnToTarget = targetHeading - getHeadingRadians();
-            double amountToTurnToBroadsideTarget = RoyMath.constrain(amountToTurnToTarget + (Math.PI / 2));
+            double amountToTurnToBroadsideTarget = Utils.normalRelativeAngle(amountToTurnToTarget + (Math.PI / 2));
             setTurnRightRadians(amountToTurnToBroadsideTarget);
         }
 
@@ -113,18 +117,21 @@ public class SpinBot extends AdvancedRobot
         }
     }
 
-    private void setTarget(ScannedRobotEvent target)
+    private void setTarget(ScannedRobotEvent newTarget)
     {
-        this.target = target;
+        target = newTarget;
 
-        if (target == null) {
+        if (newTarget == null) {
             log.i("Target expired");
             return;
-        } else if (this.target == null || !this.target.getName().equals(target.getName()))
-            log.i("Target acquired: " + target.getName());
-
-        this.targetHeading = target.getBearingRadians() + getHeadingRadians();
+        } else if (target == null || !target.getName().equals(newTarget.getName())) {
+            log.i("Target acquired: " + newTarget.getName());
+        }
+        
+        knowledgeBank.addSighting(newTarget);
+        targetHeading = newTarget.getBearingRadians() + getHeadingRadians();
     }
+
     private boolean targetExpired()
     {
         if (target == null)
@@ -132,5 +139,4 @@ public class SpinBot extends AdvancedRobot
 
         return getTime() - target.getTime() > TARGET_EXPIRE_LIMIT;
     }
-
 }
